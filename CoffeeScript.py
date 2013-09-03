@@ -137,6 +137,16 @@ class CompileCommand(TextCommand):
         source_dir = os.path.normcase(os.path.dirname(source_file))
         compile_paths = settings_get('compilePaths')
         sourcemaps = settings_get('sourceMaps', True)
+        relative_dir = None
+
+        #find current project folder to use relative dir
+        for project_dir in self.view.window().folders():
+            start_index = source_dir.lower().find(project_dir.lower())
+            if start_index > -1:
+                relative_dir = os.path.normcase(project_dir)
+        
+        
+
 
         args = ['-c', source_file]
         if no_wrapper:
@@ -151,14 +161,24 @@ class CompileCommand(TextCommand):
             appendix_len = None
             for key_path in compile_paths:
                 norm_path = os.path.normcase(key_path)
+
+                # if relative dir is not None, compile_paths join with relative_dir
+                if relative_dir is not None:
+                    norm_path = os.path.join(relative_dir, norm_path)
+
                 appendix = os.path.relpath(source_dir, norm_path)
+
                 if not appendix.startswith('..') and (appendix_len is None or len(appendix) < appendix_len):
                     appendix_len = len(appendix)
-                    compile_dir = compile_paths[key_path]
-                    if not os.path.isabs(compile_dir):
-                        compile_dir = os.path.join(norm_path, compile_dir)
-                    compile_dir = os.path.join(compile_dir, appendix)
-
+                    #if relative dir is not None, compile_path join with relative_dir and appendix
+                    if relative_dir is not None:
+                        compile_dir = os.path.join(relative_dir, compile_paths[key_path], appendix)
+                    else:
+                        compile_dir = compile_paths[key_path]
+                        if not os.path.isabs(compile_dir):
+                            compile_dir = os.path.join(norm_path, compile_dir)
+                        compile_dir = os.path.join(compile_dir, appendix)
+                print(compile_dir)
         if compile_dir and (isinstance(compile_dir, str)):
             # Check for absolute path or relative path for compile_dir
             if not os.path.isabs(compile_dir):
